@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:video_player/video_player.dart';
 import '../models/post.dart';
 import '../widgets/comment_item.dart';
 import '../models/comment.dart';
@@ -15,15 +16,42 @@ class FeedDetailScreen extends StatefulWidget {
 }
 
 class _FeedDetailScreenState extends State<FeedDetailScreen> {
-  late bool isLiked;
+  bool isLiked = false;
   final TextEditingController commentController = TextEditingController();
+  Map<String, VideoPlayerController> videoControllers = {};
 
   @override
   void initState() {
     super.initState();
-    // Initialize with default value
-    isLiked = false;
     _loadLikeState();
+    _initializeVideoControllers();
+  }
+
+  @override
+  void dispose() {
+    // Dispose all video controllers
+    for (var controller in videoControllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  void _initializeVideoControllers() {
+    final post = dummyPosts.firstWhere(
+            (p) => p.id == widget.post.id,
+        orElse: () => widget.post
+    );
+
+    for (var item in post.mediaItems) {
+      if (item.type == MediaType.video) {
+        final controller = VideoPlayerController.network(item.url);
+        videoControllers[item.url] = controller;
+        controller.initialize().then((_) {
+          // Ensure the first frame is shown
+          if (mounted) setState(() {});
+        });
+      }
+    }
   }
 
   @override
@@ -34,7 +62,6 @@ class _FeedDetailScreenState extends State<FeedDetailScreen> {
 
   Future<void> _loadLikeState() async {
     final prefs = await SharedPreferences.getInstance();
-    // Use the same key format as in PostItem
     setState(() {
       isLiked = prefs.getBool('like_${widget.post.id}') ?? false;
     });
@@ -55,7 +82,7 @@ class _FeedDetailScreenState extends State<FeedDetailScreen> {
         timeAgo: widget.post.timeAgo,
         location: widget.post.location,
         content: widget.post.content,
-        images: widget.post.images,
+        mediaItems: dummyPosts[postIndex].mediaItems,
         price: widget.post.price,
         likes: updatedLikes,
         comments: dummyPosts[postIndex].commentList.length,
@@ -91,7 +118,7 @@ class _FeedDetailScreenState extends State<FeedDetailScreen> {
           timeAgo: widget.post.timeAgo,
           location: widget.post.location,
           content: widget.post.content,
-          images: widget.post.images,
+          mediaItems: dummyPosts[postIndex].mediaItems,
           price: widget.post.price,
           likes: dummyPosts[postIndex].likes,
           comments: updatedComments.length,
@@ -104,10 +131,54 @@ class _FeedDetailScreenState extends State<FeedDetailScreen> {
     }
   }
 
+  Widget _buildMediaItem(MediaItem item) {
+    if (item.type == MediaType.image) {
+      return Image.network(
+        item.url,
+        fit: BoxFit.cover,
+        width: double.infinity,
+      );
+    } else {
+      final controller = videoControllers[item.url];
+      if (controller != null && controller.value.isInitialized) {
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            AspectRatio(
+              aspectRatio: controller.value.aspectRatio,
+              child: VideoPlayer(controller),
+            ),
+            IconButton(
+              icon: Icon(
+                controller.value.isPlaying ? Icons.pause : Icons.play_arrow,
+                size: 50,
+                color: Colors.white,
+              ),
+              onPressed: () {
+                setState(() {
+                  controller.value.isPlaying
+                      ? controller.pause()
+                      : controller.play();
+                });
+              },
+            ),
+          ],
+        );
+      } else {
+        return Center(
+          child: CircularProgressIndicator(),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // Always get the latest post from dummyPosts
-    final post = dummyPosts.firstWhere((p) => p.id == widget.post.id, orElse: () => widget.post);
+    final post = dummyPosts.firstWhere(
+            (p) => p.id == widget.post.id,
+        orElse: () => widget.post
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -142,15 +213,6 @@ class _FeedDetailScreenState extends State<FeedDetailScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(post.content, style: TextStyle(fontSize: 15)),
-                      SizedBox(height: 8),
-                      Container(
-                        color: Colors.black,
-                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        child: Text(
-                          post.price,
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -159,11 +221,28 @@ class _FeedDetailScreenState extends State<FeedDetailScreen> {
                   height: 200,
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
-                    itemCount: post.images.length,
+                    itemCount: post.mediaItems.length,
                     itemBuilder: (ctx, index) {
-                      return Container(
-                        margin: EdgeInsets.symmetric(horizontal: 8),
-                        child: Image.network(post.images[index]),
+                      return Stack(
+                        children: [
+                          Container(
+                            margin: EdgeInsets.symmetric(horizontal: 8),
+                            width: 300,
+                            child: _buildMediaItem(post.mediaItems[index]),
+                          ),
+                          Positioned(
+                            top: 0,
+                            left: 8,
+                            child: Container(
+                              color: Colors.black,
+                              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              child: Text(
+                                post.price,
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ),
+                          ),
+                        ],
                       );
                     },
                   ),

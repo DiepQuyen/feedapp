@@ -1,5 +1,3 @@
-// lib/dummy_data.dart
-
 import 'models/post.dart';
 import 'models/comment.dart';
 
@@ -11,9 +9,9 @@ final dummyPosts = [
     timeAgo: '20 Phút trước',
     location: 'Thanh Xuân, Hà Nội',
     content: 'Mình có 01 túi sách hiệu Louis Vuitton mới 100% cần bán gấp.\nBạn nào cần liên hệ mình...',
-    images: [
-      'https://images.unsplash.com/photo-1517841905240-472988babdf9',
-      'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e',
+    mediaItems: [
+      MediaItem(url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9', type: MediaType.image),
+      MediaItem(url: 'https://assets.mixkit.co/videos/preview/mixkit-fashion-model-with-a-black-and-white-outfit-42925-large.mp4', type: MediaType.video),
     ],
     price: '100.000.000 VNĐ',
     likes: 8,
@@ -40,9 +38,9 @@ final dummyPosts = [
     timeAgo: '1 Giờ trước',
     location: 'Quận 1, TP.HCM',
     content: 'Đồng hồ Rolex chính hãng, full box, bảo hành 5 năm.',
-    images: [
-      'https://images.unsplash.com/photo-1465101046530-73398c7f28ca',
-      'https://images.unsplash.com/photo-1506744038136-46273834b3fb',
+    mediaItems: [
+      MediaItem(url: 'https://assets.mixkit.co/videos/preview/mixkit-hands-holding-a-smart-watch-with-the-stopwatch-running-32808-large.mp4', type: MediaType.video),
+      MediaItem(url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb', type: MediaType.image),
     ],
     price: '250.000.000 VNĐ',
     likes: 20,
@@ -63,8 +61,9 @@ final dummyPosts = [
     timeAgo: '2 Ngày trước',
     location: 'Đống Đa, Hà Nội',
     content: 'Giày Gucci size 38, mới 99%, tặng kèm hộp và túi giấy.',
-    images: [
-      'https://images.unsplash.com/photo-1512436991641-6745cdb1723f',
+    mediaItems: [
+      MediaItem(url: 'https://images.unsplash.com/photo-1512436991641-6745cdb1723f', type: MediaType.image),
+      MediaItem(url: 'https://assets.mixkit.co/videos/preview/mixkit-putting-on-high-heel-shoes-41464-large.mp4', type: MediaType.video),
     ],
     price: '12.000.000 VNĐ',
     likes: 5,
@@ -84,5 +83,4 @@ final dummyPosts = [
       ),
     ],
   ),
-  // Add more posts as needed...
 ];

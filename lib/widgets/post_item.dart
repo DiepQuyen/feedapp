@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:video_player/video_player.dart';
 import '../models/post.dart';
 import '../screens/feed_detail_screen.dart';
 import '../dummy_data.dart';
@@ -17,6 +18,7 @@ class _PostItemState extends State<PostItem> {
   late bool isLiked;
   late bool isBookmarked;
   late int bookmarksCount;
+  Map<String, VideoPlayerController> videoControllers = {};
 
   @override
   void initState() {
@@ -25,6 +27,98 @@ class _PostItemState extends State<PostItem> {
     isBookmarked = false;
     bookmarksCount = 0;
     _loadLikeAndBookmarkState();
+    _initializeVideoControllers();
+  }
+
+  @override
+  void dispose() {
+    // Dispose all video controllers
+    for (var controller in videoControllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  void _initializeVideoControllers() {
+    for (var i = 0; i < widget.post.mediaItems.length; i++) {
+      if (widget.post.mediaItems[i].type == MediaType.video) {
+        // Use small, reliable video sources
+        String videoUrl;
+        if (i == 0) {
+          videoUrl = 'https://storage.googleapis.com/exoplayer-test-media-0/BigBuckBunny_320x180.mp4';
+        } else if (i == 1) {
+          videoUrl = 'https://storage.googleapis.com/exoplayer-test-media-0/BigBuckBunny_320x180.mp4';
+        } else {
+          videoUrl = 'https://storage.googleapis.com/exoplayer-test-media-0/BigBuckBunny_320x180.mp4';
+        }
+
+        final controller = VideoPlayerController.network(videoUrl);
+        videoControllers[widget.post.mediaItems[i].url] = controller;
+
+        // Initialize with error handling
+        controller.initialize().then((_) {
+          if (mounted) setState(() {});
+        }).catchError((error) {
+          print("Error initializing video: $error");
+        });
+      }
+    }
+  }
+
+  Widget _buildMediaItem(MediaItem item) {
+    if (item.type == MediaType.image) {
+      return Image.network(
+        item.url,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            height: 200,
+            color: Colors.grey[300],
+            child: Center(child: Icon(Icons.broken_image, size: 40)),
+          );
+        },
+      );
+    } else {
+      final controller = videoControllers[item.url];
+      if (controller != null && controller.value.isInitialized) {
+        return Container(
+          // Limit video size to prevent memory issues
+          height: 200,
+          child: AspectRatio(
+            aspectRatio: controller.value.aspectRatio,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                VideoPlayer(controller),
+                IconButton(
+                  icon: Icon(
+                    controller.value.isPlaying ? Icons.pause : Icons.play_arrow,
+                    size: 50,
+                    color: Colors.white,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      controller.value.isPlaying
+                          ? controller.pause()
+                          : controller.play();
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      } else {
+        return Container(
+          height: 200,
+          color: Colors.black,
+          child: Center(
+            child: CircularProgressIndicator(color: Colors.white),
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -57,7 +151,7 @@ class _PostItemState extends State<PostItem> {
         timeAgo: widget.post.timeAgo,
         location: widget.post.location,
         content: widget.post.content,
-        images: widget.post.images,
+        mediaItems: dummyPosts[postIndex].mediaItems,
         price: widget.post.price,
         likes: updatedLikes,
         comments: dummyPosts[postIndex].commentList.length,
@@ -128,32 +222,39 @@ class _PostItemState extends State<PostItem> {
               ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.only(left: 16, top: 8),
-            child: Container(
-              color: Colors.black,
-              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              child: Text(
-                post.price,
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
-          ),
           Container(
             margin: EdgeInsets.symmetric(vertical: 8),
             height: 200,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
-              itemCount: post.images.length,
+              itemCount: post.mediaItems.length,
               itemBuilder: (ctx, index) {
-                return Container(
-                  margin: EdgeInsets.symmetric(horizontal: 8),
-                  child: Image.network(
-                    post.images[index],
-                    fit: BoxFit.cover,
-                    width: 300,
-                    errorBuilder: (context, error, stackTrace) => Icon(Icons.broken_image),
-                  ),
+                return Stack(
+                  children: [
+                    Container(
+                      margin: EdgeInsets.symmetric(horizontal: 8),
+                      width: 300,
+                      child: _buildMediaItem(post.mediaItems[index]),
+                    ),
+                    Positioned(
+                      top: 0,
+                      left: 8,
+                      child: Container(
+                        color: Colors.black,
+                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        child: Text(
+                          post.price,
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ),
+                    if (post.mediaItems[index].type == MediaType.video)
+                      Positioned(
+                        bottom: 8,
+                        right: 8,
+                        child: Icon(Icons.videocam, color: Colors.white),
+                      ),
+                  ],
                 );
               },
             ),
@@ -178,7 +279,7 @@ class _PostItemState extends State<PostItem> {
                 Spacer(),
                 IconButton(
                   icon: Icon(
-                    isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                    isBookmarked ? Icons.star : Icons.star_border,
                     color: isBookmarked ? Colors.orange : null,
                   ),
                   onPressed: _toggleBookmark,

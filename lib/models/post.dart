@@ -1,5 +1,3 @@
-// lib/models/post.dart
-
 import 'comment.dart';
 
 class Post {
@@ -9,7 +7,7 @@ class Post {
   final String timeAgo;
   final String location;
   final String content;
-  final List<String> images;
+  final List<MediaItem> mediaItems;
   final String price;
   final int likes;
   final int comments;
@@ -22,10 +20,20 @@ class Post {
     required this.timeAgo,
     required this.location,
     required this.content,
-    required this.images,
+    required this.mediaItems, // Updated
     required this.price,
     required this.likes,
     required this.comments,
     required this.commentList,
   });
 }
+
+//  class to handle both images and videos
+class MediaItem {
+  final String url;
+  final MediaType type;
+
+  MediaItem({required this.url, required this.type});
+}
+
+enum MediaType { image, video }

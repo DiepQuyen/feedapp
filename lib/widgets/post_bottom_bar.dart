@@ -37,7 +37,7 @@ class PostBottomBar extends StatelessWidget {
         Text('$comments Bình luận'),
         Spacer(),
         IconButton(
-          icon: Icon(Icons.bookmark_border),
+          icon: Icon(Icons.star_border),
           onPressed: onBookmark,
         ),
         Text('$bookmarks'),
